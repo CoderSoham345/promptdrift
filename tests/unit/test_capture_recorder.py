@@ -104,9 +104,7 @@ class TestCaptureRecorderBasic:
 
     def test_never_raises_on_bad_db_path(self):
         """Capture failures must never break the host application."""
-        recorder = CaptureRecorder(
-            CaptureConfig(enabled=True, db_path=None)
-        )
+        recorder = CaptureRecorder(CaptureConfig(enabled=True, db_path=None))
 
         result = recorder.record(
             prompt="p.txt",
@@ -120,9 +118,7 @@ class TestCaptureRecorderBasic:
 
     def test_system_prompt_recorded(self, tmp_path):
         db = tmp_path / "test.db"
-        recorder = CaptureRecorder(
-            CaptureConfig(enabled=True, db_path=db)
-        )
+        recorder = CaptureRecorder(CaptureConfig(enabled=True, db_path=db))
 
         result = recorder.record(
             prompt="p.txt",
@@ -316,10 +312,7 @@ class TestSampling:
         assert decision1 == decision2
 
     def test_different_fingerprints_vary(self):
-        results = [
-            should_sample(f"fp_{i}", 0.5)
-            for i in range(1000)
-        ]
+        results = [should_sample(f"fp_{i}", 0.5) for i in range(1000)]
 
         true_count = sum(results)
 
@@ -494,9 +487,7 @@ class TestSqliteHelpers:
                     prompt="p",
                     input=f"in_{i}",
                     output=f"out_{i}",
-                    timestamp=datetime(
-                        2024, 1, 1 + i, tzinfo=UTC
-                    ),
+                    timestamp=datetime(2024, 1, 1 + i, tzinfo=UTC),
                 ),
                 path=db,
             )
