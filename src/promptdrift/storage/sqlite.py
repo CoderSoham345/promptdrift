@@ -66,7 +66,6 @@ def _migrate_db(db: sqlite3.Connection) -> None:
     db.commit()
 
 
-
 def record_report(
     report: RegressionReport,
     path: Path | None = None,
@@ -95,9 +94,7 @@ def record_report(
                     evaluation.expected = None
                     evaluation.actual = None
                     evaluation.reason = (
-                        "Passed."
-                        if evaluation.passed
-                        else "Contract not satisfied."
+                        "Passed." if evaluation.passed else "Contract not satisfied."
                     )
 
         # Insertion and retention pruning share one transaction.
@@ -134,8 +131,7 @@ def record_report(
 
         if "locked" in message or "busy" in message:
             raise PromptDriftError(
-                "SQLite history database is locked. "
-                "Close other PromptDrift processes and retry."
+                "SQLite history database is locked. Close other PromptDrift processes and retry."
             ) from exc
 
         # Preserve existing behavior for unrelated storage failures.
@@ -144,11 +140,7 @@ def record_report(
     except sqlite3.DatabaseError as exc:
         message = str(exc).lower()
 
-        if (
-            "malformed" in message
-            or "corrupt" in message
-            or "not a database" in message
-        ):
+        if "malformed" in message or "corrupt" in message or "not a database" in message:
             raise PromptDriftError(
                 "SQLite history database appears corrupted. "
                 "Back up the database, then rename or remove it "

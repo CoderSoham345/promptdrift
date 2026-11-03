@@ -28,17 +28,11 @@ class CaptureConfig:
 
     def __post_init__(self) -> None:
         if not 0.0 <= self.sample_rate <= 1.0:
-            raise ValueError(
-                f"sample_rate must be between 0.0 and 1.0, got {self.sample_rate}"
-            )
+            raise ValueError(f"sample_rate must be between 0.0 and 1.0, got {self.sample_rate}")
         if self.max_interactions is not None and self.max_interactions < 1:
-            raise ValueError(
-                f"max_interactions must be >= 1, got {self.max_interactions}"
-            )
+            raise ValueError(f"max_interactions must be >= 1, got {self.max_interactions}")
         if self.retention_days is not None and self.retention_days < 1:
-            raise ValueError(
-                f"retention_days must be >= 1, got {self.retention_days}"
-            )
+            raise ValueError(f"retention_days must be >= 1, got {self.retention_days}")
 
 
 class StorageConfig(BaseModel):

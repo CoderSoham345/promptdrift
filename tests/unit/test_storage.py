@@ -1,7 +1,5 @@
 """Tests for SQLite local history storage."""
 
-
-
 import sqlite3
 
 import pytest
@@ -77,10 +75,9 @@ class TestSqliteStorage:
         # Writing to a directory path should fail silently
         record_report(make_report(), path=tmp_path)
         # No exception raised
-    
-    
-class TestSqliteStorageRetention:
 
+
+class TestSqliteStorageRetention:
     def test_retention_keeps_latest_runs(self, tmp_path):
         db_path = tmp_path / "test.db"
 
@@ -95,9 +92,7 @@ class TestSqliteStorageRetention:
             )
 
         with sqlite3.connect(db_path) as db:
-            rows = db.execute(
-                "SELECT model FROM runs ORDER BY rowid DESC"
-            ).fetchall()
+            rows = db.execute("SELECT model FROM runs ORDER BY rowid DESC").fetchall()
 
         assert len(rows) == 3
         assert rows[0][0] == "model-4"
@@ -118,9 +113,7 @@ class TestSqliteStorageRetention:
             )
 
         with sqlite3.connect(db_path) as db:
-            rows = db.execute(
-                "SELECT model FROM runs ORDER BY rowid DESC LIMIT 1"
-            ).fetchall()
+            rows = db.execute("SELECT model FROM runs ORDER BY rowid DESC LIMIT 1").fetchall()
 
         assert len(rows) == 1
         assert rows[0][0] == "model-2"
@@ -135,32 +128,21 @@ class TestSqliteStorageRetention:
 
 
 class TestSqliteStorageRecovery:
-
     def test_locked_database_error(self, tmp_path):
         from promptdrift.storage.history import SqliteStorage
 
-        storage = SqliteStorage(
-            str(tmp_path / "test.db")
-        )
+        storage = SqliteStorage(str(tmp_path / "test.db"))
 
         with pytest.raises(PromptDriftError, match="locked"):
-            storage._handle_sqlite_error(
-                sqlite3.OperationalError("database is locked")
-            )
+            storage._handle_sqlite_error(sqlite3.OperationalError("database is locked"))
 
     def test_corrupted_database_error(self, tmp_path):
         from promptdrift.storage.history import SqliteStorage
 
-        storage = SqliteStorage(
-            str(tmp_path / "test.db")
-        )
+        storage = SqliteStorage(str(tmp_path / "test.db"))
 
         with pytest.raises(PromptDriftError, match="corrupted"):
-            storage._handle_sqlite_error(
-                sqlite3.DatabaseError(
-                    "database disk image is malformed"
-                )
-            )
+            storage._handle_sqlite_error(sqlite3.DatabaseError("database disk image is malformed"))
 
     def test_corrupted_database_file(self, tmp_path):
         from promptdrift.storage.history import SqliteStorage
@@ -182,4 +164,3 @@ class TestSqliteStorageRecovery:
 
         assert storage.get_history() == []
         assert not db_path.exists()
-

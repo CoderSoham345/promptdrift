@@ -1,4 +1,3 @@
-
 """Bounded, project-local monitoring history.
 
 Never stores provider payloads.
@@ -29,6 +28,7 @@ def history_path(config_path: Path) -> Path:
 # HISTORY SCHEMA
 # ---------------------------------------------------------------------
 
+
 def _validate_history_schema(db: sqlite3.Connection) -> int:
     """Validate the monitoring history database schema."""
 
@@ -55,12 +55,7 @@ def _validate_history_schema(db: sqlite3.Connection) -> int:
             "back up or remove the local history database."
         )
 
-    columns = [
-        row[1]
-        for row in db.execute(
-            "PRAGMA table_info(monitor_runs)"
-        ).fetchall()
-    ]
+    columns = [row[1] for row in db.execute("PRAGMA table_info(monitor_runs)").fetchall()]
 
     if columns != ["run_id", "report_json"]:
         raise PromptDriftError(
@@ -101,22 +96,19 @@ def _ensure_history_schema(db: sqlite3.Connection) -> None:
             """
         )
 
-        db.execute(
-            f"PRAGMA user_version = {HISTORY_SCHEMA_VERSION}"
-        )
+        db.execute(f"PRAGMA user_version = {HISTORY_SCHEMA_VERSION}")
         return
 
     version = _validate_history_schema(db)
 
     if version == 0:
-        db.execute(
-            f"PRAGMA user_version = {HISTORY_SCHEMA_VERSION}"
-        )
+        db.execute(f"PRAGMA user_version = {HISTORY_SCHEMA_VERSION}")
 
 
 # ---------------------------------------------------------------------
 # SQLITE ERROR HANDLING
 # ---------------------------------------------------------------------
+
 
 def _history_write_error(exc: Exception) -> PromptDriftError:
     """Convert history write errors into actionable messages."""
@@ -124,9 +116,7 @@ def _history_write_error(exc: Exception) -> PromptDriftError:
     message = str(exc).lower()
 
     if isinstance(exc, sqlite3.OperationalError) and (
-        "database is locked" in message
-        or "database is busy" in message
-        or "locked" in message
+        "database is locked" in message or "database is busy" in message or "locked" in message
     ):
         return PromptDriftError(
             "Monitoring history database is locked; "
@@ -152,7 +142,6 @@ def _history_write_error(exc: Exception) -> PromptDriftError:
     )
 
 
-
 def _history_read_error(exc: Exception) -> PromptDriftError:
     """Convert history read errors into actionable messages."""
 
@@ -160,9 +149,7 @@ def _history_read_error(exc: Exception) -> PromptDriftError:
 
     # Handle locked or busy database
     if isinstance(exc, sqlite3.OperationalError) and (
-        "database is locked" in message
-        or "database is busy" in message
-        or "locked" in message
+        "database is locked" in message or "database is busy" in message or "locked" in message
     ):
         return PromptDriftError(
             "Monitoring history database is locked; "
@@ -185,15 +172,14 @@ def _history_read_error(exc: Exception) -> PromptDriftError:
 
     # Handle other database read errors
     return PromptDriftError(
-        "Monitoring history is unreadable; "
-        "back up or remove the local history database."
+        "Monitoring history is unreadable; back up or remove the local history database."
     )
-
 
 
 # ---------------------------------------------------------------------
 # MONITOR REPORT STORAGE
 # ---------------------------------------------------------------------
+
 
 def save_monitor_report(
     report: MonitorReport,
@@ -212,10 +198,7 @@ def save_monitor_report(
             exist_ok=True,
         )
 
-        with closing(
-            sqlite3.connect(path, timeout=5)
-        ) as db:
-
+        with closing(sqlite3.connect(path, timeout=5)) as db:
             with db:
                 _ensure_history_schema(db)
 
@@ -275,7 +258,6 @@ def load_monitor_history(
                 timeout=5,
             )
         ) as db:
-
             _validate_history_schema(db)
 
             rows = db.execute(
@@ -288,10 +270,7 @@ def load_monitor_history(
                 (limit,),
             ).fetchall()
 
-        return [
-            json.loads(row[0])
-            for row in rows
-        ]
+        return [json.loads(row[0]) for row in rows]
 
     except PromptDriftError:
         raise
@@ -304,6 +283,7 @@ def load_monitor_history(
 # SQLITE STORAGE CLASS
 # ---------------------------------------------------------------------
 
+
 class SqliteStorage:
     """SQLite storage with bounded monitoring history."""
 
@@ -313,9 +293,7 @@ class SqliteStorage:
         retention_limit: int = 100,
     ):
         if retention_limit < 1:
-            raise ValueError(
-                "retention_limit must be at least 1"
-            )
+            raise ValueError("retention_limit must be at least 1")
 
         self.db_path = str(db_path)
         self.retention_limit = retention_limit
@@ -328,10 +306,7 @@ class SqliteStorage:
 
         try:
             if read_only:
-                db_uri = (
-                    Path(self.db_path).resolve().as_uri()
-                    + "?mode=ro"
-                )
+                db_uri = Path(self.db_path).resolve().as_uri() + "?mode=ro"
 
                 conn = sqlite3.connect(
                     db_uri,
@@ -376,10 +351,7 @@ class SqliteStorage:
         """Insert a run and prune older records atomically."""
 
         try:
-            with closing(
-                self._get_connection()
-            ) as conn:
-
+            with closing(self._get_connection()) as conn:
                 with conn:
                     self._ensure_schema(conn)
 
@@ -412,9 +384,7 @@ class SqliteStorage:
             self._handle_sqlite_error(exc)
 
         except KeyError as exc:
-            raise PromptDriftError(
-                f"Invalid monitoring run data: missing field {exc}."
-            ) from exc
+            raise PromptDriftError(f"Invalid monitoring run data: missing field {exc}.") from exc
 
     def get_history(self) -> list[dict]:
         """
@@ -429,10 +399,7 @@ class SqliteStorage:
             return []
 
         try:
-            with closing(
-                self._get_connection(read_only=True)
-            ) as conn:
-
+            with closing(self._get_connection(read_only=True)) as conn:
                 cursor = conn.cursor()
 
                 cursor.execute(
@@ -445,10 +412,7 @@ class SqliteStorage:
 
                 rows = cursor.fetchall()
 
-                return [
-                    json.loads(row["data"])
-                    for row in rows
-                ]
+                return [json.loads(row["data"]) for row in rows]
 
         except (sqlite3.Error, OSError, ValueError, TypeError) as exc:
             self._handle_sqlite_error(exc)
@@ -462,9 +426,7 @@ class SqliteStorage:
         message = str(error).lower()
 
         if isinstance(error, sqlite3.OperationalError) and (
-            "database is locked" in message
-            or "database is busy" in message
-            or "locked" in message
+            "database is locked" in message or "database is busy" in message or "locked" in message
         ):
             raise PromptDriftError(
                 f"Monitoring history database is locked at "
@@ -497,4 +459,3 @@ class SqliteStorage:
             f"'{self.db_path}': {error}. "
             "Check database access and retry."
         ) from error
-
