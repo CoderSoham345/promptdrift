@@ -30,7 +30,7 @@ from .errors import (
     TemplateError,
 )
 from .git import GitContext
-from .reports import print_impact_report, print_report, write_html_report
+from .reports import print_impact_report, print_report, write_html_report, write_junit_xml
 from .storage import (
     add_or_update_scenarios,
     get_interactions,
@@ -322,12 +322,18 @@ def check(
         bool, typer.Option("--json", help="Emit machine-readable JSON.")
     ] = False,
     verbose: Annotated[bool, typer.Option("--verbose", "-v")] = False,
+    junit_xml: Annotated[
+        Path | None,
+        typer.Option("--junit-xml", help="Write a JUnit XML report."),
+    ] = None,
 ) -> None:
     """Git-aware scenario execution and Impact Radius report."""
     try:
         loaded, config_path = load_config(config)
         report, impact = orchestrate_check(loaded, config_path, base_ref=base)
         record_report(report, store_raw_output=loaded.baseline.store_raw_output)
+        if junit_xml is not None:
+            write_junit_xml(report, junit_xml, impact=impact)
 
         if json_output:
             out_data = {
@@ -362,6 +368,12 @@ def accept(
     accept_regressions: Annotated[
         bool, typer.Option("--accept-regressions", help="Accept REGRESSED scenarios.")
     ] = False,
+    run_id: Annotated[
+        str | None,
+        typer.Option(
+            "--run-id", help="Promote a reviewed run from monitoring history to baseline."
+        ),
+    ] = None,
     force: Annotated[
         bool, typer.Option(help="Overwrite existing baseline without confirmation.")
     ] = False,
@@ -371,7 +383,7 @@ def accept(
     """Accept current behavior as the new canonical baseline."""
     try:
         from promptdrift.config import load_config
-        from promptdrift.engine.accept import selective_accept
+        from promptdrift.engine.accept import accept_from_history, selective_accept
         from promptdrift.engine.baseline import load_baseline
         from promptdrift.engine.baseline_history import archive_baseline
         from promptdrift.engine.check import orchestrate_check
@@ -387,7 +399,20 @@ def accept(
                 console.print("[yellow]Aborted.[/]")
                 return
 
-        if not path.exists():
+        if run_id:
+            if changed:
+                raise BaselineError(
+                    "--changed cannot be combined with --run-id. Use --scenario to select cases."
+                )
+            accept_from_history(
+                loaded,
+                config_path,
+                run_id=run_id,
+                scenario_ids=scenario if scenario else None,
+                accept_regressions=accept_regressions,
+                force=True,
+            )
+        elif not path.exists():
             if scenario or changed:
                 raise BaselineError(
                     "Selective acceptance requires an existing baseline. Create a full reviewed baseline first."
@@ -426,9 +451,15 @@ def accept(
             atomic_write(path, content)
 
         if json_output:
-            typer.echo(json.dumps({"baseline": str(path), "status": "accepted"}, indent=2))
+            payload = {"baseline": str(path), "status": "accepted"}
+            if run_id:
+                payload["promoted_run_id"] = run_id
+            typer.echo(json.dumps(payload, indent=2))
         else:
-            console.print(f"[green]Accepted new baseline:[/] {path}")
+            if run_id:
+                console.print(f"[green]Accepted new baseline from history run {run_id}:[/] {path}")
+            else:
+                console.print(f"[green]Accepted new baseline:[/] {path}")
     except PromptDriftError as error:
         _exit_error(error, verbose)
 
@@ -455,10 +486,17 @@ def test(
         bool, typer.Option("--json", help="Emit machine-readable JSON.")
     ] = False,
     verbose: Annotated[bool, typer.Option("--verbose", "-v")] = False,
+    junit_xml: Annotated[
+        Path | None,
+        typer.Option("--junit-xml", help="Write a JUnit XML report."),
+    ] = None,
 ) -> None:
     """Run behavioral contracts; automatically compares an existing baseline."""
     result = _run(config, with_baseline=True, verbose=verbose)
     if result:
+        if junit_xml is not None:
+            write_junit_xml(result[2], junit_xml)
+
         _emit(result[2], json_output)
 
 

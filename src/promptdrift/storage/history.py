@@ -279,6 +279,7 @@ def load_monitor_history(
         raise _history_read_error(exc) from exc
 
 
+ feature/history-retention-hardening
 # ---------------------------------------------------------------------
 # SQLITE STORAGE CLASS
 # ---------------------------------------------------------------------
@@ -459,3 +460,32 @@ class SqliteStorage:
             f"'{self.db_path}': {error}. "
             "Check database access and retry."
         ) from error
+
+def load_monitor_run_by_id(path: Path, run_id: str) -> MonitorReport:
+    """Retrieve a specific monitoring report by its run_id."""
+    if not path.exists():
+        raise PromptDriftError(f"Monitoring history database not found: {path}")
+    try:
+        with closing(
+            sqlite3.connect(f"{path.resolve().as_uri()}?mode=ro", uri=True, timeout=5)
+        ) as db:
+            _validate_history_schema(db)
+            row = db.execute(
+                "SELECT report_json FROM monitor_runs WHERE run_id = ?", (run_id,)
+            ).fetchone()
+        if row is None:
+            raise PromptDriftError(f"Monitoring run '{run_id}' not found in history.")
+        data = json.loads(row[0])
+        if not isinstance(data, dict):
+            raise PromptDriftError(
+                f"Monitoring run '{run_id}' is corrupted; back up the database, "
+                "then remove the run or the database."
+            )
+        data.pop("counts", None)
+        data.pop("diagnosis_counts", None)
+        return MonitorReport.model_validate(data)
+    except (OSError, sqlite3.Error, ValueError) as exc:
+        if isinstance(exc, PromptDriftError):
+            raise
+        raise _history_read_error(exc) from exc
+ main
