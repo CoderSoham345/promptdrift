@@ -91,6 +91,7 @@ tests:
 | `id` | string | Yes | — | Unique test identifier |
 | `prompt` | string | Yes | — | Path to the Jinja2 prompt template |
 | `variables` | dict | No | `{}` | Key-value pairs passed to the template |
+| `request_envelope` | object | No | — | Declared `system`, `tools` and `retrieval_context` for provenance hashing only; see [baselines](baselines.md#request-envelopes) |
 | `assertions` | list | No | `[]` | Deterministic behavioral contracts |
 | `thresholds` | dict | No | `{}` | `latency_ms` and `cost_usd` limits; unknown cost cannot satisfy a limit |
 | `output` | object | No | `{format: text}` | `format: json` adds a JSON-validity contract |

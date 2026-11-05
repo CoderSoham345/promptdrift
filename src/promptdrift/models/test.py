@@ -119,11 +119,35 @@ class Threshold(BaseModel):
     fail: float | None = Field(default=None, ge=0)
 
 
+class ToolSchema(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    name: str = Field(min_length=1)
+    description: str = ""
+    parameters: dict[str, Any] = Field(default_factory=dict)
+
+
+class RequestEnvelope(BaseModel):
+    """Declared request context for provenance only; it is never sent to a provider."""
+
+    model_config = ConfigDict(extra="forbid")
+    system: str | None = None
+    tools: list[ToolSchema] = Field(default_factory=list)
+    retrieval_context: dict[str, Any] = Field(default_factory=dict)
+
+    @model_validator(mode="after")
+    def reject_duplicate_tools(self) -> RequestEnvelope:
+        names = [tool.name for tool in self.tools]
+        if len(names) != len(set(names)):
+            raise ValueError("request_envelope tool names must be unique")
+        return self
+
+
 class TestCase(BaseModel):
     model_config = ConfigDict(extra="forbid")
     id: str = Field(pattern=r"^[A-Za-z0-9][A-Za-z0-9_.-]*$")
     prompt: str
     variables: dict[str, Any] = Field(default_factory=dict)
+    request_envelope: RequestEnvelope | None = None
     assertions: list[Assertion] = Field(default_factory=list)
     evaluators: list[Evaluator] = Field(default_factory=list)
     output: OutputConfig = Field(default_factory=OutputConfig)

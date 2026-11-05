@@ -11,7 +11,7 @@ import hashlib
 from pathlib import Path
 
 from promptdrift.engine.baseline import load_baseline
-from promptdrift.engine.provenance import fingerprint, with_response
+from promptdrift.engine.provenance import ENVELOPE_COMPONENTS, fingerprint, with_response
 from promptdrift.engine.runner import evaluate_response, evaluation_status
 from promptdrift.engine.suite import resolve_suite
 from promptdrift.errors import ConfigError, ProviderError
@@ -51,6 +51,21 @@ def _diagnose(
             if getattr(old.provenance, field) != getattr(current, field):
                 changed_fields.append(label)
                 evidence.append(f"{field} differs from the accepted baseline.")
+        # Envelope components are part of the request, so they triage as prompt_changed.
+        before, after = old.provenance.envelope_hashes, current.envelope_hashes
+        if (before is None) != (after is None):
+            changed_fields.append("prompt_changed")
+            evidence.append(
+                f"request_envelope was {'added' if before is None else 'removed'} "
+                "since the accepted baseline."
+            )
+        elif before is not None and after is not None:
+            for component in ENVELOPE_COMPONENTS:
+                if before.get(component) != after.get(component):
+                    changed_fields.append("prompt_changed")
+                    evidence.append(
+                        f"request_envelope.{component} differs from the accepted baseline."
+                    )
     if errors:
         return (
             "provider_error",
