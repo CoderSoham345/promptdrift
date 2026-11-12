@@ -279,7 +279,6 @@ def load_monitor_history(
         raise _history_read_error(exc) from exc
 
 
- feature/history-retention-hardening
 # ---------------------------------------------------------------------
 # SQLITE STORAGE CLASS
 # ---------------------------------------------------------------------
@@ -461,6 +460,7 @@ class SqliteStorage:
             "Check database access and retry."
         ) from error
 
+
 def load_monitor_run_by_id(path: Path, run_id: str) -> MonitorReport:
     """Retrieve a specific monitoring report by its run_id."""
     if not path.exists():
@@ -488,4 +488,3 @@ def load_monitor_run_by_id(path: Path, run_id: str) -> MonitorReport:
         if isinstance(exc, PromptDriftError):
             raise
         raise _history_read_error(exc) from exc
- main
